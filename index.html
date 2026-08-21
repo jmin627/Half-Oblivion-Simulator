@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>절반 소멸 시뮬레이터 - 우주의 절반을 날려볼까요?</title>
+  <meta name="description" content="손가락을 한 번 튕길 때마다 세상의 무언가가 무작위로 절반으로 사라지는 우주적 블랙코미디 시뮬레이터">
+  <meta name="theme-color" content="#08090f">
+  
+  <!-- CSS Stylesheet -->
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <!-- Canvas 우주 별빛 & 먼지 소멸 파티클 배경 -->
+  <canvas id="particle-canvas"></canvas>
+
+  <!-- Cosmic 전용 웜홀 오버레이 -->
+  <div id="cosmic-overlay"></div>
+
+  <!-- 범용 토스트 알림 컨테이너 -->
+  <div id="toast-container"></div>
+
+  <!-- 1. 헤더 HUD -->
+  <header class="app-header">
+    <div class="hud-left">
+      <div class="level-badge-container">
+        <div id="hud-player-level" class="level-badge">Lv. 1</div>
+        <div id="hud-gauntlet-name" class="gauntlet-name">낡은 작업용 장갑</div>
+      </div>
+      <div class="exp-bar-container">
+        <div class="exp-bar-track">
+          <div id="hud-exp-bar" class="exp-bar-fill" style="width: 0%"></div>
+        </div>
+        <div id="hud-exp-text" class="exp-bar-text">0 / 120 EXP</div>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div class="currency-pill luck-pill">
+        <span id="hud-luck">🍀 +0</span>
+      </div>
+      <div class="currency-pill">
+        <span>✨ <strong id="hud-dust">100</strong></span>
+      </div>
+      <button id="hud-sound-toggle" class="icon-btn" title="사운드 켜기/끄기" aria-label="사운드 토글">🔊</button>
+    </div>
+  </header>
+
+  <!-- 2. 메인 스냅 구역 -->
+  <main class="main-content">
+    <div class="hero-title-area">
+      <h1>우주의 절반을 날려볼까요?</h1>
+      <p class="hero-subtitle">손가락을 한 번 튕길 때마다 세상의 무언가가 절반으로 사라집니다.</p>
+    </div>
+
+    <!-- 콤보 디스플레이 -->
+    <div id="combo-display" class="combo-display">
+      SNAP <span id="combo-count">x1</span> COMBO!
+    </div>
+
+    <!-- 건틀릿 인터랙션 비주얼 -->
+    <div id="gauntlet-container" class="gauntlet-wrapper" title="클릭하거나 스와이프하여 스냅!">
+      <div class="gauntlet-aura-ring"></div>
+      
+      <!-- 오리지널 SF 코스믹 건틀릿 SVG -->
+      <svg id="gauntlet-visual" class="gauntlet-svg" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="metalGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#475569" />
+            <stop offset="50%" stop-color="#1e293b" />
+            <stop offset="100%" stop-color="#0f172a" />
+          </linearGradient>
+          <linearGradient id="goldPlate" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fef08a" />
+            <stop offset="40%" stop-color="#f59e0b" />
+            <stop offset="100%" stop-color="#b45309" />
+          </linearGradient>
+          <filter id="gemGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="3" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+          </filter>
+        </defs>
+
+        <!-- 건틀릿 팔뚝 / 베이스 플레이트 -->
+        <path d="M 60 145 L 70 195 L 130 195 L 140 145 Z" fill="url(#metalGrad)" stroke="#64748b" stroke-width="2" />
+        <path d="M 75 160 L 125 160 L 120 185 L 80 185 Z" fill="url(#goldPlate)" opacity="0.8" />
+
+        <!-- 손바닥 & 손등 코어 플레이트 -->
+        <path d="M 55 90 C 55 75, 145 75, 145 90 L 140 145 L 60 145 Z" fill="url(#metalGrad)" stroke="#94a3b8" stroke-width="2.5" />
+        
+        <!-- 중앙 현실 조작 코어 젬 -->
+        <circle cx="100" cy="115" r="14" fill="#f59e0b" filter="url(#gemGlow)" stroke="#fef08a" stroke-width="1.5" />
+        <circle cx="100" cy="115" r="7" fill="#ffffff" opacity="0.9" />
+
+        <!-- 건틀릿 손가락 마디 및 젬들 -->
+        <!-- 엄지 -->
+        <path d="M 55 105 L 35 90 C 30 85, 38 72, 48 78 L 62 92 Z" fill="url(#goldPlate)" stroke="#78350f" stroke-width="1.5" />
+        <circle cx="42" cy="85" r="4.5" fill="#38bdf8" filter="url(#gemGlow)" />
+
+        <!-- 검지 (스냅 튕김) -->
+        <path d="M 68 80 L 68 35 C 68 26, 82 26, 82 35 L 82 80 Z" fill="url(#goldPlate)" stroke="#78350f" stroke-width="1.5" />
+        <circle cx="75" cy="50" r="4.5" fill="#a855f7" filter="url(#gemGlow)" />
+
+        <!-- 중지 (스냅 중심) -->
+        <path d="M 86 76 L 86 25 C 86 16, 100 16, 100 25 L 100 76 Z" fill="url(#goldPlate)" stroke="#78350f" stroke-width="1.5" />
+        <circle cx="93" cy="42" r="4.5" fill="#ef4444" filter="url(#gemGlow)" />
+
+        <!-- 약지 -->
+        <path d="M 104 80 L 104 36 C 104 27, 118 27, 118 36 L 118 80 Z" fill="url(#goldPlate)" stroke="#78350f" stroke-width="1.5" />
+        <circle cx="111" cy="52" r="4.5" fill="#10b981" filter="url(#gemGlow)" />
+
+        <!-- 소지 (새끼손가락) -->
+        <path d="M 122 88 L 122 48 C 122 40, 134 40, 134 48 L 134 88 Z" fill="url(#goldPlate)" stroke="#78350f" stroke-width="1.5" />
+        <circle cx="128" cy="62" r="4" fill="#ec4899" filter="url(#gemGlow)" />
+
+        <!-- 에너지 서킷 라인 -->
+        <path d="M 75 55 L 90 105" stroke="#fef08a" stroke-width="1.5" opacity="0.7" />
+        <path d="M 93 48 L 98 102" stroke="#fef08a" stroke-width="1.5" opacity="0.7" />
+        <path d="M 111 58 L 105 105" stroke="#fef08a" stroke-width="1.5" opacity="0.7" />
+        <path d="M 44 88 L 88 112" stroke="#fef08a" stroke-width="1.5" opacity="0.7" />
+      </svg>
+    </div>
+
+    <!-- 큰 SNAP 버튼 -->
+    <button id="snap-btn" class="snap-main-btn" aria-label="우주의 절반 스냅 실행">
+      ⚡ SNAP
+    </button>
+    <div class="snap-shortcut-tip">클릭, 화면 스와이프 또는 [Space] 키</div>
+  </main>
+
+  <!-- 3. 하단 네비게이션 탭 -->
+  <nav class="bottom-nav">
+    <button class="nav-tab-btn" data-tab="codex">
+      <span class="nav-icon">📖</span>
+      <span class="nav-label">소멸 도감</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="achievements">
+      <span class="nav-icon">🏆</span>
+      <span class="nav-label">업적</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="stats">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">통계·성향</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="missions">
+      <span class="nav-icon">📜</span>
+      <span class="nav-label">일일 미션</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="shop">
+      <span class="nav-icon">🛍️</span>
+      <span class="nav-label">코스믹 상점</span>
+    </button>
+    <button class="nav-tab-btn" data-tab="settings">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">설정</span>
+    </button>
+  </nav>
+
+  <!-- ================= 🪟 모달 팝업들 ================= -->
+
+  <!-- A. 결과 카드 모달 -->
+  <div id="result-modal" class="app-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>우주 소멸 결과</h2>
+        <button id="result-close-btn" class="modal-close-btn" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="result-card"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B. 소멸 도감 모달 -->
+  <div id="modal-codex" class="app-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📖 소멸 도감 (Codex)</h2>
+        <button class="modal-close-btn" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="codex-progress-box"></div>
+        <div id="codex-category-filters" class="codex-category-filter-wrap"></div>
+        <div id="codex-grid" class="codex-grid-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- C. 업적 모달 -->
+  <div id="modal-achievements" class="app-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🏆 업적 & 보상</h2>
+        <button class="modal-close-btn" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="achievements-summary" style="margin-bottom: 14px; font-weight: 700; color: var(--accent-gold);"></p>
+        <div id="achievements-list" class="achievements-list-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D. 통계 & 성향 모달 -->
+  <div id="modal-stats" class="app-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📊 우주적 통계 및 성향</h2>
+        <button class="modal-close-btn" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="stats-karma-title" class="karma-container"></div>
+        <div id="stats-grid" class="stats-grid-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- E. 일일 미션 모달 -->
+  <div id="modal-missions" class="app-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📜 오늘의 우주 미션</h2>
+        <button class="modal-close-btn" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px;">
+          매일 자정에 새로운 미션이 부여됩니다. 완료 시 Dust와 EXP를 획득하세요!
+        </p>
+        <div id="missions-list" class="missions-list-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- F. 코스믹 상점 모달 -->
+  <div id="modal-shop" class="app-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🛍️ 코스믹 상점</h2>
+        <button class="modal-close-btn" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px;">
+          Cosmic Dust를 소모하여 스킨, 파티클 오라, 우주 테마를 해금하세요. (실제 결제 없음)
+        </p>
+        <div id="shop-grid" class="shop-grid-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- G. 설정 모달 -->
+  <div id="modal-settings" class="app-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚙️ 환경 설정</h2>
+        <button class="modal-close-btn" aria-label="닫기">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="settings-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JavaScript Module Entry -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
